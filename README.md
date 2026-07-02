@@ -111,7 +111,7 @@ The bot runs on stateless AWS Lambda. It downloads each Telegram file into Lambd
 
 Support: [@vitaly_zdanevich](https://t.me/vitaly_zdanevich)
 
-## Other Telegram Bots
+## My Other Telegram Bots
 
 GitHub:
 
