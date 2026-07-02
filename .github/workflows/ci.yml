@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy rustfmt
+          rustup default stable
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Test
+        run: cargo test --locked
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+  terraform:
+    name: Terraform
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4.0.1
+
+      - name: Format
+        run: terraform fmt -check -recursive infra
+
+      - name: Create placeholder Lambda zip
+        run: |
+          mkdir -p build
+          printf 'placeholder' > build/lambda.zip
+
+      - name: Validate
+        run: |
+          terraform -chdir=infra init -backend=false
+          terraform -chdir=infra validate

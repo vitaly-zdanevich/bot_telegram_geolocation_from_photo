@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FUNCTION_URL="${FUNCTION_URL:-$(terraform -chdir="$ROOT_DIR/infra" output -raw function_url)}"
+TFVARS_FILE="$ROOT_DIR/infra/terraform.tfvars"
+
+# Reads a simple quoted string variable from the local ignored tfvars file.
+tfvars_string() {
+	local key="$1"
+	if [[ -f "$TFVARS_FILE" ]]; then
+		sed -n "s/^[[:space:]]*${key}[[:space:]]*=[[:space:]]*\"\\(.*\\)\"[[:space:]]*$/\\1/p" "$TFVARS_FILE" | tail -n 1
+	fi
+}
+
+TOKEN="${TELEGRAM_BOT_TOKEN:-${TF_VAR_telegram_bot_token:-$(tfvars_string telegram_bot_token)}}"
+SECRET="${TELEGRAM_WEBHOOK_SECRET:-${TF_VAR_telegram_webhook_secret:-$(tfvars_string telegram_webhook_secret)}}"
+
+if [[ -z "$TOKEN" ]]; then
+	echo "TELEGRAM_BOT_TOKEN or TF_VAR_telegram_bot_token is required" >&2
+	exit 1
+fi
+if [[ -z "$SECRET" ]]; then
+	echo "TELEGRAM_WEBHOOK_SECRET or TF_VAR_telegram_webhook_secret is required" >&2
+	exit 1
+fi
+
+if command -v jq >/dev/null 2>&1; then
+	payload="$(jq -n \
+		--arg url "$FUNCTION_URL" \
+		--arg secret "$SECRET" \
+		'{url: $url, secret_token: $secret, allowed_updates: ["message"]}')"
+else
+	payload="{\"url\":\"${FUNCTION_URL}\",\"secret_token\":\"${SECRET}\",\"allowed_updates\":[\"message\"]}"
+fi
+
+curl -fsS \
+	-X POST \
+	"https://api.telegram.org/bot${TOKEN}/setWebhook" \
+	-H 'content-type: application/json' \
+	-d "$payload"
+
+echo
+echo "Webhook set to $FUNCTION_URL"

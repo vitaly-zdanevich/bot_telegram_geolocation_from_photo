@@ -1,0 +1,7 @@
+telegram_bot_token      = "123456:replace-me"
+telegram_webhook_secret = "replace-with-a-long-random-secret"
+
+# Optional:
+# nominatim_email           = "you@example.com"
+# nominatim_accept_language = "en"
+# wikipedia_languages       = ["en", "ru", "be"]
